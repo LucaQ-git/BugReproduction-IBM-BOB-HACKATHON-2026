@@ -1,0 +1,345 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BugRep-AI — Team Summary</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #ffffff;
+    color: #1f2328;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 40px 20px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  .header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #1f2328; }
+  .header .sub { font-size: 14px; color: #57606a; margin-top: 5px; }
+  .badge {
+    display: inline-block;
+    background: #eef2ff;
+    color: #3b82d4;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid #c7d7f9;
+    margin-top: 10px;
+    letter-spacing: 0.3px;
+  }
+
+  h2 { font-size: 15px; font-weight: 700; color: #1f2328; margin: 28px 0 12px; }
+  h3 { font-size: 13px; font-weight: 700; color: #1f2328; margin: 0 0 6px; }
+
+  .intro {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 28px;
+    font-size: 14px;
+    color: #1f2328;
+  }
+  .intro strong { color: #3b82d4; }
+
+  /* Steps */
+  .steps { display: flex; flex-direction: column; gap: 0; margin-bottom: 28px; }
+  .step {
+    display: flex;
+    gap: 16px;
+    position: relative;
+    padding-bottom: 24px;
+  }
+  .step:last-child { padding-bottom: 0; }
+  .step-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-line {
+    width: 2px;
+    flex: 1;
+    background: #e5e7eb;
+    margin-top: 4px;
+  }
+  .step:last-child .step-line { display: none; }
+  .step-body { flex: 1; padding-top: 4px; }
+  .step-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .step-desc { font-size: 13px; color: #57606a; line-height: 1.6; }
+  .step-detail {
+    margin-top: 8px;
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: #57606a;
+  }
+  .step-detail code {
+    background: #e5e7eb;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: "Consolas", monospace;
+    font-size: 11.5px;
+    color: #1f2328;
+  }
+
+  .n-blue  { background: #dbeafe; color: #1d4ed8; }
+  .n-green { background: #dcfce7; color: #15803d; }
+  .n-red   { background: #fee2e2; color: #b91c1c; }
+  .n-purple{ background: #ede9fe; color: #6d28d9; }
+  .n-orange{ background: #ffedd5; color: #c2410c; }
+
+  /* Roles */
+  .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+  .role-card {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .role-icon { font-size: 20px; margin-bottom: 6px; }
+  .role-name { font-size: 13px; font-weight: 700; color: #1f2328; margin-bottom: 4px; }
+  .role-desc { font-size: 12px; color: #57606a; line-height: 1.5; }
+
+  /* Rules table */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 28px; font-size: 13px; }
+  th {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #57606a;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  td {
+    border: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    vertical-align: top;
+    color: #1f2328;
+  }
+  tr:nth-child(even) td { background: #f7f8fa; }
+  .tick { color: #15803d; font-weight: 700; }
+  .cross { color: #b91c1c; font-weight: 700; }
+
+  /* Key point box */
+  .keypoint {
+    background: #fff8e1;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    font-size: 13px;
+    color: #92400e;
+  }
+  .keypoint strong { color: #78350f; }
+
+  /* Commands */
+  .cmd-block {
+    background: #1f2328;
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 28px;
+    font-family: "Consolas", monospace;
+    font-size: 12.5px;
+    line-height: 2;
+  }
+  .cmd-comment { color: #57606a; }
+  .cmd-line { color: #e5e7eb; }
+  .cmd-prompt { color: #3b82d4; margin-right: 8px; }
+
+  .section-rule { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #57606a;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>BugRep-AI</h1>
+    <div class="sub">Automated bug reproduction and fix workflow — team overview</div>
+    <span class="badge">Powered by IBM Bob IDE</span>
+  </div>
+
+  <div class="intro">
+    <strong>One sentence:</strong> You give it a bug report in plain English, and it automatically writes tests that prove the bug exists, proposes a fix for your approval, applies it, and generates a report — all driven by IBM Bob.
+  </div>
+
+  <h2>What problem does it solve?</h2>
+  <p style="color:#57606a;margin-bottom:20px;font-size:13px">
+    Normally when someone reports a bug, a developer has to manually reproduce it, write a test, figure out the fix, and document it. BugRep-AI automates all of that using IBM Bob as the AI engine. The developer stays in control — they approve the fix before anything is applied.
+  </p>
+
+  <h2>How it works — step by step</h2>
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num n-blue">1</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">You provide a bug report</div>
+        <div class="step-desc">A plain-English description of what's broken goes into <code>fixtures/bug_report.txt</code>. Business rules (what the code <em>should</em> do) live in <code>docs/cart_rules.md</code>. No special format needed.</div>
+        <div class="step-detail">Example: <em>"The cart total becomes negative when a discount over 100% is applied."</em></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num n-blue">2</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">Run the orchestrator</div>
+        <div class="step-desc">You run <code>node orchestrator.js</code> in the terminal. It loads your bug report and rules, then prints the exact prompt to paste into IBM Bob.</div>
+        <div class="step-detail">The orchestrator is a coordinator — it does not pretend to be AI. It loads files, runs tests, and tracks state.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num n-red">3</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">🔴 Test Agent — Bob writes and runs tests</div>
+        <div class="step-desc">You paste the prompt into IBM Bob IDE. Bob reads the bug report and business rules, then writes strict tests against the <em>buggy</em> copy of the code. The tests are designed to fail — that's the point.</div>
+        <div class="step-detail">
+          Bob runs Jest. Result: <strong>6 passed, 12 failed</strong> — all assertion failures.<br />
+          This proves the bug is real, not just a complaint.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num n-green">4</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">🔧 Fix Agent — Bob proposes a fix</div>
+        <div class="step-desc">Bob reads the failing tests and the buggy code, identifies the root cause, and shows you a <strong>diff</strong> (the exact lines it wants to change) before touching anything.</div>
+        <div class="step-detail"><strong>You must approve the diff.</strong> Bob will not apply any fix without your explicit "approve" in the chat.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num n-green">5</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">🟢 Fix applied and verified</div>
+        <div class="step-desc">After your approval, Bob applies the fix to the production file and reruns the same tests. All tests must pass — without changing a single assertion.</div>
+        <div class="step-detail">If tests still fail after the fix, Bob reports that honestly and stops. It does not retry silently or weaken the tests.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left">
+        <div class="step-num n-purple">6</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-body">
+        <div class="step-title">📋 Report Agent — Bob documents everything</div>
+        <div class="step-desc">Bob generates a Markdown and JSON report covering: the original bug, reproduction evidence, root cause, the diff, before/after test results, and any remaining limitations.</div>
+        <div class="step-detail">Reports are saved to <code>reports/run-&lt;id&gt;.md</code> and <code>reports/run-&lt;id&gt;.json</code>. Every claim is traceable to an actual file or run result.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="section-rule" />
+
+  <h2>The three IBM Bob agent roles</h2>
+  <div class="roles">
+    <div class="role-card">
+      <div class="role-icon">🔴</div>
+      <div class="role-name">Test Agent</div>
+      <div class="role-desc">Reads the bug report and writes tests. Runs them against the broken code. Reports what actually failed.</div>
+    </div>
+    <div class="role-card">
+      <div class="role-icon">🔧</div>
+      <div class="role-name">Fix Agent</div>
+      <div class="role-desc">Uses the failures to find the root cause. Shows a diff for your approval. Applies it and verifies with a full test run.</div>
+    </div>
+    <div class="role-card">
+      <div class="role-icon">📋</div>
+      <div class="role-name">Report Agent</div>
+      <div class="role-desc">Reviews all run artifacts and produces a complete Markdown + JSON report from real data only.</div>
+    </div>
+  </div>
+
+  <hr class="section-rule" />
+
+  <h2>What the shopping cart example tests</h2>
+  <table>
+    <thead>
+      <tr><th>Scenario</th><th>Expected result</th><th>Buggy code</th><th>Fixed code</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Empty cart</td><td>Returns 0</td><td><span class="tick">✓</span> Passes</td><td><span class="tick">✓</span> Passes</td></tr>
+      <tr><td>$50 + $50, 10% off</td><td>Returns 90</td><td><span class="tick">✓</span> Passes</td><td><span class="tick">✓</span> Passes</td></tr>
+      <tr><td>200% discount</td><td>Returns 0 (never negative)</td><td><span class="cross">✗</span> Returns −10</td><td><span class="tick">✓</span> Returns 0</td></tr>
+      <tr><td>Undefined discount</td><td>Treat as 0%</td><td><span class="cross">✗</span> Returns NaN</td><td><span class="tick">✓</span> Returns full price</td></tr>
+      <tr><td>Negative discount</td><td>Clamp to 0%</td><td><span class="cross">✗</span> Acts as surcharge</td><td><span class="tick">✓</span> No surcharge</td></tr>
+      <tr><td>NaN / Infinity discount</td><td>Throw RangeError</td><td><span class="cross">✗</span> No error</td><td><span class="tick">✓</span> Throws</td></tr>
+      <tr><td>Missing item price</td><td>Throw TypeError</td><td><span class="cross">✗</span> No error</td><td><span class="tick">✓</span> Throws</td></tr>
+      <tr><td>Decimal prices</td><td>Round to 2dp</td><td><span class="cross">✗</span> Floating point noise</td><td><span class="tick">✓</span> Rounded</td></tr>
+    </tbody>
+  </table>
+
+  <div class="keypoint">
+    <strong>The golden rule:</strong> Tests are never weakened to make them pass. The only valid fix is a correct implementation change. IBM Bob is explicitly instructed to refuse any approach that relaxes an assertion.
+  </div>
+
+  <hr class="section-rule" />
+
+  <h2>Commands to run it</h2>
+  <div class="cmd-block">
+    <div><span class="cmd-comment"># 1. Install dependencies (once)</span></div>
+    <div><span class="cmd-prompt">$</span><span class="cmd-line">cd bugrep-ai &amp;&amp; npm install</span></div>
+    <div style="margin-top:8px"><span class="cmd-comment"># 2. Check state and get the Bob prompt for the next stage</span></div>
+    <div><span class="cmd-prompt">$</span><span class="cmd-line">node orchestrator.js</span></div>
+    <div style="margin-top:8px"><span class="cmd-comment"># 3. After Bob writes/applies, record the test result</span></div>
+    <div><span class="cmd-prompt">$</span><span class="cmd-line">node orchestrator.js --run-tests</span></div>
+    <div style="margin-top:8px"><span class="cmd-comment"># 4. Start a fresh run</span></div>
+    <div><span class="cmd-prompt">$</span><span class="cmd-line">node orchestrator.js --reset</span></div>
+  </div>
+
+  <hr class="section-rule" />
+
+  <h2>What's coming next</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Full workflow in Bob IDE</td><td><span class="tick">✓ Works now</span></td></tr>
+      <tr><td>Jira integration (fetch issue as bug report)</td><td>Interface ready — needs credentials in <code>.env</code></td></tr>
+      <tr><td>Web GUI with live progress and diff approval</td><td>Planned — needs Bob Shell on a backend server</td></tr>
+      <tr><td>Multi-repo support</td><td>Planned — needs repo selector UI</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>

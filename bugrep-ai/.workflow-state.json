@@ -1,0 +1,36 @@
+{
+  "runId": null,
+  "startedAt": null,
+  "updatedAt": "2026-09-25T22:22:42.546Z",
+  "stage": "test",
+  "bugReport": null,
+  "rules": null,
+  "testFile": "src/cart.fixture.test.js",
+  "redResult": {
+    "passed": 6,
+    "failed": 12,
+    "errorType": "assertion",
+    "output": [
+      "empty cart with undefined discount returns 0 (bug: yields NaN): Expected: 0, Received: NaN",
+      "decimal result requiring rounding is rounded to 2 dp: Expected: 6.67, Received: 6.6667000000000005",
+      "discount greater than 100% clamps total to 0 (bug: returns negative): Expected: 0, Received: -5",
+      "undefined discountPercentage returns full subtotal (bug: yields NaN): Expected: 20, Received: NaN",
+      "no discount argument at all returns full subtotal (bug: yields NaN): Expected: 20, Received: NaN",
+      "negative discount is clamped to 0 (bug: acts as surcharge): Expected: 50, Received: 60",
+      "NaN discount throws RangeError (bug: silently produces NaN): Received function did not throw",
+      "Infinity discount throws RangeError (bug: silently produces -Infinity): Received function did not throw",
+      "-Infinity discount throws RangeError (bug: silently produces Infinity): Received function did not throw",
+      "item with undefined price throws TypeError (bug: silently accumulates NaN): Received function did not throw",
+      "item with missing price property throws TypeError (bug: silently accumulates NaN): Received function did not throw",
+      "item with negative price throws TypeError (bug: silently accepts): Received function did not throw"
+    ]
+  },
+  "bugReproduced": true,
+  "proposedDiff": null,
+  "fixApproved": false,
+  "patchedFile": null,
+  "greenResult": null,
+  "reportMd": null,
+  "reportJson": null,
+  "notes": []
+}
