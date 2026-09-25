@@ -1,0 +1,20 @@
+{
+  "name": "bugrep-ai",
+  "version": "1.0.0",
+  "description": "Automated bug reproduction and regression patch generator powered by IBM Bob 2.0",
+  "main": "orchestrator.js",
+  "scripts": {
+    "start": "node orchestrator.js",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "dependencies": {
+    "@ibm-cloud/watsonx-ai": "^1.7.16",
+    "dotenv": "^18.0.4"
+  }
+}

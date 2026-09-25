@@ -1,0 +1,363 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BugRep-AI — IBM Bob 2.0</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+  .page { max-width: 780px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid #2d3748;
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+  .header p  { font-size: 13px; color: #718096; margin-top: 4px; }
+  .badge {
+    display: inline-block;
+    background: #1a365d;
+    color: #63b3ed;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #2b6cb0;
+    margin-top: 8px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+
+  /* Terminal card */
+  .terminal {
+    background: #1a1d27;
+    border: 1px solid #2d3748;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .terminal-bar {
+    background: #2d3748;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #fc8181; }
+  .dot-y { background: #f6e05e; }
+  .dot-g { background: #68d391; }
+  .terminal-label { font-size: 11px; color: #718096; margin-left: 8px; font-family: monospace; }
+  .terminal-body { padding: 18px 20px; font-family: "Cascadia Code", "Consolas", monospace; font-size: 12.5px; line-height: 1.8; }
+
+  /* Log lines */
+  .log-line { display: flex; gap: 10px; align-items: baseline; }
+  .log-icon { flex-shrink: 0; width: 20px; text-align: center; }
+  .c-white  { color: #e2e8f0; }
+  .c-muted  { color: #718096; }
+  .c-green  { color: #68d391; }
+  .c-red    { color: #fc8181; }
+  .c-yellow { color: #f6e05e; }
+  .c-blue   { color: #63b3ed; }
+  .c-cyan   { color: #76e4f7; }
+  .indent   { padding-left: 30px; }
+  .sep { border-top: 1px solid #2d3748; margin: 10px 0; }
+
+  /* Step cards */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .step-card {
+    background: #1a1d27;
+    border: 1px solid #2d3748;
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .step-card.active { border-color: #3b82d4; }
+  .step-num { font-size: 10px; color: #718096; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+  .step-title { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+  .step-desc { font-size: 11px; color: #718096; line-height: 1.5; }
+  .step-status { margin-top: 8px; font-size: 11px; font-weight: 600; }
+  .status-pass { color: #68d391; }
+  .status-fail { color: #fc8181; }
+  .status-ok   { color: #63b3ed; }
+
+  /* Result banner */
+  .result-banner {
+    background: #1a2e1a;
+    border: 1px solid #276727;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .result-icon { font-size: 28px; }
+  .result-title { font-size: 15px; font-weight: 700; color: #68d391; }
+  .result-sub   { font-size: 12px; color: #48bb78; margin-top: 3px; }
+
+  /* Test table */
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #718096;
+    margin-bottom: 10px;
+  }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th {
+    background: #2d3748;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    color: #a0aec0;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  th:first-child { border-radius: 6px 0 0 6px; }
+  th:last-child  { border-radius: 0 6px 6px 0; }
+  td {
+    font-size: 12.5px;
+    padding: 9px 12px;
+    border-bottom: 1px solid #1a1d27;
+    color: #e2e8f0;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .tag-pass { background: #1a2e1a; color: #68d391; border: 1px solid #276727; }
+  .tag-fail { background: #2d1515; color: #fc8181; border: 1px solid #742020; }
+
+  /* Bob session guide */
+  .guide {
+    background: #1a1d27;
+    border: 1px solid #2d3748;
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+  }
+  .guide-title { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 12px; }
+  .guide ol { padding-left: 20px; }
+  .guide ol li { font-size: 13px; color: #a0aec0; line-height: 1.7; margin-bottom: 4px; }
+  .guide ol li strong { color: #e2e8f0; }
+  .mock-session {
+    background: #0f1117;
+    border: 1px solid #2d3748;
+    border-radius: 6px;
+    margin-top: 14px;
+    overflow: hidden;
+  }
+  .mock-session-header {
+    background: #2d3748;
+    padding: 8px 14px;
+    font-size: 11px;
+    color: #718096;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .mock-session-body { padding: 14px 16px; }
+  .session-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #1a1d27; font-size: 12px; }
+  .session-row:last-child { border-bottom: none; }
+  .session-key { color: #718096; }
+  .session-val { color: #e2e8f0; font-weight: 600; font-family: monospace; }
+  .session-val.hi { color: #63b3ed; }
+  .session-val.warn { color: #f6e05e; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #4a5568;
+    padding-top: 16px;
+    border-top: 1px solid #2d3748;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  
+  <div class="header">
+    <h1>BugRep-AI</h1>
+    <p>Automated bug reproduction &amp; regression patch generator</p>
+    <span class="badge">Powered by IBM Bob 2.0</span>
+  </div>
+
+  
+  <div class="section-title">Orchestrator Terminal Output</div>
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="terminal-label">node orchestrator.js</span>
+    </div>
+    <div class="terminal-body">
+      <div class="log-line"><span class="log-icon">🤖</span><span class="c-white">[BugRep-AI] Initializing IBM Bob 2.0 Agent Workflow...</span></div>
+      <div class="sep"></div>
+      <div class="log-line"><span class="log-icon">📄</span><span class="c-blue">Step 1: Document Understanding &amp; Context Loaded.</span></div>
+      <div class="log-line indent"><span class="c-muted">Bug Report :</span> <span class="c-yellow">The cart total becomes incorrect or yields NaN/negative values when applying a discount to an empty cart or when items array is empty.</span></div>
+      <div class="log-line indent"><span class="c-muted">Cart Rules :</span> <span class="c-cyan">cart_rules.md → 3 business rules loaded</span></div>
+      <div class="sep"></div>
+      <div class="log-line"><span class="log-icon">🔍</span><span class="c-blue">Step 2: Bob Subagents executing (Analysing codebase &amp; generating test)...</span></div>
+      <div class="log-line indent"><span class="c-muted">↳ Subagent 1:</span> <span class="c-white">Parsing bug report &amp; reading docs</span></div>
+      <div class="log-line indent"><span class="c-muted">↳ Subagent 2:</span> <span class="c-white">Writing strict unit test assertions</span></div>
+      <div class="log-line indent"><span class="c-muted">↳ Subagent 3:</span> <span class="c-white">Proposing implementation patch</span></div>
+      <div class="sep"></div>
+      <div class="log-line"><span class="log-icon">✅</span><span class="c-green">Step 3: Reproduction test written to src/cart.test.js</span></div>
+      <div class="sep"></div>
+      <div class="log-line"><span class="log-icon">🔴</span><span class="c-red">Step 4: Running test suite to capture reproduction failure...</span></div>
+      <div class="log-line indent"><span class="c-muted">FAIL  src/cart.test.js</span></div>
+      <div class="log-line indent"><span class="c-green">  ✓ calculateTotal handles empty cart safely without negative values or NaN</span></div>
+      <div class="log-line indent"><span class="c-green">  ✓ calculateTotal returns correct total for non-empty cart with discount</span></div>
+      <div class="log-line indent"><span class="c-red">  ✗ calculateTotal never returns a negative value even with extreme discount</span></div>
+      <div class="log-line indent"><span class="c-muted">    Expected: &gt;= 0   Received: -10</span></div>
+      <div class="log-line indent"><span class="c-muted">    Tests: 1 failed, 2 passed, 3 total   Time: 0.274 s</span></div>
+      <div class="log-line"><span class="log-icon">⚠️</span><span class="c-yellow">Expected Result: Tests failed (bug successfully reproduced).</span></div>
+      <div class="sep"></div>
+      <div class="log-line"><span class="log-icon">🔧</span><span class="c-blue">Step 5: Bob Agent applying implementation patch...</span></div>
+      <div class="log-line"><span class="log-icon">✅</span><span class="c-green">Patch applied to src/cart.js</span></div>
+      <div class="sep"></div>
+      <div class="log-line"><span class="log-icon">🟢</span><span class="c-green">Step 6: Re-running test suite after patch...</span></div>
+      <div class="log-line indent"><span class="c-green">PASS  src/cart.test.js</span></div>
+      <div class="log-line indent"><span class="c-green">  ✓ calculateTotal handles empty cart safely without negative values or NaN</span></div>
+      <div class="log-line indent"><span class="c-green">  ✓ calculateTotal returns correct total for non-empty cart with discount</span></div>
+      <div class="log-line indent"><span class="c-green">  ✓ calculateTotal never returns a negative value even with extreme discount</span></div>
+      <div class="log-line indent"><span class="c-muted">    Tests: 3 passed, 3 total   Time: 0.255 s</span></div>
+      <div class="sep"></div>
+      <div class="log-line"><span class="log-icon">🎉</span><span class="c-green"><strong>SUCCESS: All tests passed! Regression fixed without weakening assertions.</strong></span></div>
+    </div>
+  </div>
+
+  
+  <div class="section-title">Workflow Stages</div>
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-num">Stage 1</div>
+      <div class="step-title">Document Understanding</div>
+      <div class="step-desc">Bug report + business rules parsed by IBM Bob's document ingestion pipeline.</div>
+      <div class="step-status status-ok">● Loaded</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">Stage 2–3</div>
+      <div class="step-title">Test Generation</div>
+      <div class="step-desc">3 strict assertions written. No assertion weakening permitted by agent constraint.</div>
+      <div class="step-status status-ok">● Generated</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">Stage 4</div>
+      <div class="step-title">Bug Reproduced</div>
+      <div class="step-desc">Test suite intentionally fails on the broken implementation — confirms the bug is real.</div>
+      <div class="step-status status-fail">● RED (1 fail)</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">Stage 5</div>
+      <div class="step-title">Patch Applied</div>
+      <div class="step-desc">Guard clause + floor-to-zero added by Bob Agent. Business Rules #2 &amp; #3 satisfied.</div>
+      <div class="step-status status-ok">● Patched</div>
+    </div>
+    <div class="step-card active">
+      <div class="step-num">Stage 6</div>
+      <div class="step-title">Regression Fixed</div>
+      <div class="step-desc">All 3 assertions pass. Implementation corrected; test integrity preserved.</div>
+      <div class="step-status status-pass">● GREEN (3/3)</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">Compliance</div>
+      <div class="step-title">Session Proof</div>
+      <div class="step-desc">Bob IDE task session screenshots saved to /bob_sessions as PNG files.</div>
+      <div class="step-status status-ok">● /bob_sessions</div>
+    </div>
+  </div>
+
+  
+  <div class="section-title">Test Results — Before &amp; After Patch</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Test</th>
+        <th>Before Patch</th>
+        <th>After Patch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Empty cart returns 0 with any discount</td>
+        <td><span class="tag tag-pass">PASS</span></td>
+        <td><span class="tag tag-pass">PASS</span></td>
+      </tr>
+      <tr>
+        <td>Non-empty cart with 10% discount returns correct total</td>
+        <td><span class="tag tag-pass">PASS</span></td>
+        <td><span class="tag tag-pass">PASS</span></td>
+      </tr>
+      <tr>
+        <td>Extreme discount (200%) never returns negative value</td>
+        <td><span class="tag tag-fail">FAIL  −10</span></td>
+        <td><span class="tag tag-pass">PASS  0</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+  <div class="result-banner">
+    <div class="result-icon">🎉</div>
+    <div>
+      <div class="result-title">SUCCESS — Exit code 0</div>
+      <div class="result-sub">From ambiguous bug report to verified, regression-tested code. Built with IBM Bob 2.0.</div>
+    </div>
+  </div>
+
+  
+  <div class="guide">
+    <div class="guide-title">What a Bob Session Summary Looks Like &amp; How to Capture It</div>
+    <ol>
+      <li>In Bob IDE, open the <strong>Tasks</strong> panel in the left sidebar.</li>
+      <li>Select the task you just ran (e.g. "Bug Analysis" or "Patch Generation").</li>
+      <li>Click the <strong>task title / header</strong> at the top of the task detail view.</li>
+      <li>A <strong>session summary card</strong> appears showing the fields below.</li>
+      <li>Press <strong>Print Screen</strong> or use your OS snipping tool, save as <code>.png</code>.</li>
+      <li>Drop the file in <code>/bob_sessions/</code> named e.g. <code>alice_task01_bug_analysis.png</code>.</li>
+    </ol>
+
+    <div class="mock-session">
+      <div class="mock-session-header">Example — Bob IDE Task Session Summary Card</div>
+      <div class="mock-session-body">
+        <div class="session-row"><span class="session-key">Task</span><span class="session-val hi">Bug Analysis &amp; Test Generation</span></div>
+        <div class="session-row"><span class="session-key">Status</span><span class="session-val hi">Completed</span></div>
+        <div class="session-row"><span class="session-key">Started</span><span class="session-val">2026-07-12  09:14:03</span></div>
+        <div class="session-row"><span class="session-key">Finished</span><span class="session-val">2026-07-12  09:17:41</span></div>
+        <div class="session-row"><span class="session-key">Duration</span><span class="session-val">3 min 38 s</span></div>
+        <div class="session-row"><span class="session-key">Bobcoin Used</span><span class="session-val warn">12 / 40</span></div>
+        <div class="session-row"><span class="session-key">Tool Calls</span><span class="session-val">18</span></div>
+        <div class="session-row"><span class="session-key">Subagents Spawned</span><span class="session-val">3</span></div>
+        <div class="session-row"><span class="session-key">Files Modified</span><span class="session-val">src/cart.js, src/cart.test.js</span></div>
+        <div class="session-row"><span class="session-key">Mode</span><span class="session-val">Agent</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>

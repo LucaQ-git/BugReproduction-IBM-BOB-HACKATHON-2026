@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# Environment variables — NEVER commit this, it contains API keys
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

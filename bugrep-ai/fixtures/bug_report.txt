@@ -1,0 +1,2 @@
+Bug Report: The cart total becomes incorrect or yields NaN/negative values when applying
+a discount to an empty cart or when items array is empty.
