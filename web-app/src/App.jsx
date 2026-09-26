@@ -114,7 +114,9 @@ export default function App() {
         body: JSON.stringify({ title: reportTitle, body: reportText }),
       });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      setSubmitStatus('ok');
+      const data = await res.json();
+      // On Vercel the file can't be written — surface the content for manual copy
+      setSubmitStatus(data.note ? 'vercel' : 'ok');
     } catch (e) {
       setSubmitStatus('error');
     }
@@ -331,12 +333,19 @@ export default function App() {
             {submitStatus === 'ok' && (
               <div className="modal-success">
                 ✅ Bug report saved to <code>bugrep-ai/fixtures/bug_report.txt</code>.<br />
-                Run <code>node orchestrator.js --auto</code> to start the fix workflow.
+                Run <code>node orchestrator.js</code> to start the fix workflow.
+              </div>
+            )}
+            {submitStatus === 'vercel' && (
+              <div className="modal-success">
+                ✅ Report generated. Copy the text above into{' '}
+                <code>bugrep-ai/fixtures/bug_report.txt</code> on your local machine,
+                then run <code>node orchestrator.js</code>.
               </div>
             )}
             {submitStatus === 'error' && (
               <div className="modal-error">
-                ❌ Could not save. Is the dev server running? (<code>npm run dev:server</code>)
+                ❌ Could not reach the API. Try again or copy the report text manually.
               </div>
             )}
             <div className="modal-actions">
