@@ -1,65 +1,41 @@
-// src/cart.js — Production implementation
-// Satisfies all business rules documented in docs/cart_rules.md plus the
-// additional input-validation rules agreed with the project owner.
+// src/cart.js — Production implementation (patched)
 
-/**
- * Calculate the discounted total for a shopping cart.
- *
- * @param {Array<{price: number}>} items            - Cart items (each must have a finite, non-negative price)
- * @param {number}                 [discountPercentage=0] - Discount in % (0–100; clamped if negative; throws if NaN/Infinite)
- * @returns {number} Total rounded to 2 decimal places, never below 0.
- * @throws {TypeError}  if any item has a missing, non-numeric, or negative price.
- * @throws {RangeError} if discountPercentage is NaN or ±Infinity.
- */
 function calculateTotal(items, discountPercentage) {
-  // ── Validate discount ─────────────────────────────────────────────────────
-  // Default: undefined / missing → 0
-  if (discountPercentage === undefined || discountPercentage === null) {
-    discountPercentage = 0;
+  // Rule 6: NaN or ±Infinity discount → RangeError
+  if (typeof discountPercentage === 'number' &&
+      (isNaN(discountPercentage) || !isFinite(discountPercentage))) {
+    throw new RangeError('discountPercentage must be a finite number');
   }
 
-  // NaN or ±Infinity are programming errors, not edge cases to swallow
-  if (typeof discountPercentage !== 'number' || !isFinite(discountPercentage)) {
-    throw new RangeError(
-      `discountPercentage must be a finite number; received ${discountPercentage}`
-    );
-  }
+  // Rule 4: undefined/missing discount → treat as 0%
+  // Rule 5: negative discount → clamp to 0%
+  let discount = (discountPercentage === undefined || discountPercentage === null)
+    ? 0
+    : discountPercentage;
+  if (discount < 0) discount = 0;
 
-  // Negative discount = no benefit, clamp to 0 (Business Rule: total never rises from discount)
-  if (discountPercentage < 0) {
-    discountPercentage = 0;
-  }
+  // Rule 3: empty cart always returns 0
+  if (items.length === 0) return 0;
 
-  // ── Empty cart guard (Business Rule #3) ──────────────────────────────────
-  if (!items || items.length === 0) {
-    return 0;
-  }
-
-  // ── Validate each item ────────────────────────────────────────────────────
+  // Rules 7 & 8: validate each item's price
   for (const item of items) {
-    const p = item.price;
-    if (p === undefined || p === null || typeof p !== 'number' || !isFinite(p)) {
-      throw new TypeError(
-        `Each item must have a finite numeric price; received ${p}`
-      );
+    if (item.price === undefined || item.price === null || typeof item.price !== 'number' || isNaN(item.price)) {
+      throw new TypeError('Each item must have a numeric price');
     }
-    if (p < 0) {
-      throw new TypeError(
-        `Item prices must be non-negative; received ${p}`
-      );
+    if (item.price < 0) {
+      throw new TypeError('Item prices must be non-negative');
     }
   }
 
-  // ── Compute total ─────────────────────────────────────────────────────────
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
-  const discount = (subtotal * discountPercentage) / 100;
-  const raw      = subtotal - discount;
+  const discountAmount = (subtotal * discount) / 100;
+  const total = subtotal - discountAmount;
 
-  // Business Rule #2: total must never drop below 0
-  const floored  = raw < 0 ? 0 : raw;
+  // Rule 2: total must never be negative (discount > 100%)
+  const clamped = Math.max(0, total);
 
-  // Round to 2 decimal places (standard currency precision)
-  return Math.round(floored * 100) / 100;
+  // Rule 9: round to 2 decimal places
+  return Math.round(clamped * 100) / 100;
 }
 
 module.exports = { calculateTotal };

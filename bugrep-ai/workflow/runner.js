@@ -18,14 +18,15 @@ const path          = require('path');
 function runJest(testGlob, cwd) {
   cwd = cwd || path.resolve(__dirname, '..');
 
-  // Use local jest from node_modules so the caller doesn't need a global install
-  const jestBin = path.join(cwd, 'node_modules', '.bin', 'jest');
+  // Invoke jest via 'node jest/bin/jest.js' to avoid .cmd wrapper issues on
+  // Windows (shell:false with .cmd drops stdout; shell:true triggers a
+  // deprecation warning).  jest/bin/jest.js is the canonical entry point and
+  // works identically on all platforms.
+  const jestScript = path.join(cwd, 'node_modules', 'jest', 'bin', 'jest.js');
+  const cmd  = process.execPath;   // the node binary running this process
+  const args = [jestScript, testGlob, '--no-coverage', '--json'];
 
-  const result = spawnSync(
-    process.platform === 'win32' ? jestBin + '.cmd' : jestBin,
-    [testGlob, '--no-coverage', '--json'],
-    { cwd, encoding: 'utf8', shell: false }
-  );
+  const result = spawnSync(cmd, args, { cwd, encoding: 'utf8', shell: false });
 
   const exitCode = result.status ?? 1;
   const stderr   = (result.stderr || '').trim();

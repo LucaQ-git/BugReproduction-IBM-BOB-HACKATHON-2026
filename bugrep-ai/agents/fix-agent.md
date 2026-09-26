@@ -55,11 +55,15 @@ If either precondition is not met, **stop and report** — do not guess at a fix
 2. Read `src/cart.fixture.js`, `src/cart.test.js`, and `docs/cart_rules.md`.
 3. Identify the **minimal change** that makes all failing tests pass without
    breaking any passing test.
-4. **Show the proposed diff** to the user before touching any file.  
-   Use a standard unified diff format.  Explain the root cause in 2–3 sentences.
-5. Wait for explicit approval (`yes`, `approve`, `apply it`).  
-   If the user requests changes to the diff, update and re-show — do not apply.
-6. Once approved, write the fix into **`src/cart.js`** (the production file).  
+4. **Record the proposed diff** in `.workflow-state.json` under `proposedDiff`
+   (standard unified diff format).  Explain the root cause in 2–3 sentences.
+5. **Check `fixApproved` in `.workflow-state.json`.**
+   - If `fixApproved` is `true` (set by the orchestrator in `--auto` mode), proceed
+     immediately — no human input is required.
+   - If `fixApproved` is `false`, show the diff to the user and wait for explicit
+     approval (`yes`, `approve`, `apply it`) before touching any file.
+     If the user requests changes, update and re-show — do not apply.
+6. Once approved (by state or by the user), write the fix into **`src/cart.js`** (the production file).
    Do not modify `src/cart.fixture.js` — it is the permanent buggy reference.
 7. Run the full test suite (`src/cart.test.js`) against `src/cart.js`.
    The test file's imports must point to `./cart` for the GREEN run.

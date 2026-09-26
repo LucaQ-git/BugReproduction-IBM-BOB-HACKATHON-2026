@@ -54,6 +54,42 @@ bugrep-ai/
 - **IBM Bob IDE** (enterprise or trial)
 - The workspace opened in Bob IDE so the custom modes in `.bob/custom_modes.yaml` are loaded
 
+### Additional prerequisites for `--auto` mode
+
+- **Bob Shell** installed on your machine
+- A **Bob API key** (Inference scope) set as `BOBSHELL_API_KEY`
+
+#### Installing Bob Shell (Windows)
+
+```powershell
+powershell -ep Bypass 'irm -Uri "https://bob.ibm.com/download/bobshell.ps1" | iex'
+```
+
+#### Setting your API key
+
+Get an Inference-scoped API key from the Bob web portal → Account → API Keys, then:
+
+```powershell
+# Temporary (current session only)
+$env:BOBSHELL_API_KEY = "your-key-here"
+
+# Permanent (persists across reboots)
+[System.Environment]::SetEnvironmentVariable('BOBSHELL_API_KEY', 'your-key-here', 'User')
+```
+
+Or add it to `bugrep-ai/.env` (never commit this file):
+
+```
+BOBSHELL_API_KEY=your-key-here
+```
+
+You only need to accept the license agreement once:
+
+```powershell
+$env:BOBSHELL_API_KEY = "your-key-here"
+bob run --accept-license "hello"
+```
+
 ---
 
 ## Quick start
@@ -63,11 +99,15 @@ bugrep-ai/
 cd bugrep-ai
 npm install
 
-# 2. Check current state and get the Bob task prompt for Stage 1
+# 2a. Manual mode — get the Bob IDE prompt for Stage 1
 node orchestrator.js
+
+# 2b. Automatic mode — run all 3 stages hands-free via Bob Shell
+node orchestrator.js --auto
 ```
 
-Bob IDE will print a prompt block.  Copy it into the Bob chat panel.
+In manual mode, Bob IDE will print a prompt block. Copy it into the Bob chat panel.
+In automatic mode, Bob Shell drives every stage without any human input.
 
 ---
 
@@ -109,6 +149,24 @@ Bob IDE will print a prompt block.  Copy it into the Bob chat panel.
 3. Bob reads `agents/report-agent.md` and all artifacts, then writes:
    - `reports/run-<id>.md`
    - `reports/run-<id>.json`
+
+### Automatic mode (all stages at once)
+
+Requires Bob Shell + `BOBSHELL_API_KEY` (see [Prerequisites](#additional-prerequisites-for---auto-mode)):
+
+```bash
+cd bugrep-ai
+node orchestrator.js --auto
+```
+
+The orchestrator will:
+1. Reset state and start a fresh run
+2. Invoke Bob Shell → **Test Agent** writes `src/cart.test.js` and runs Jest (RED)
+3. Invoke Bob Shell → **Fix Agent** patches `src/cart.js` and runs Jest (GREEN)
+4. Invoke Bob Shell → **Report Agent** writes `reports/run-<id>.md` + `.json`
+
+All output is printed to the terminal in real time.  If any stage fails, the
+workflow stops and records the failure in `.workflow-state.json`.
 
 ---
 
@@ -162,7 +220,8 @@ before using it as a bug report input.
   `toBeGreaterThanOrEqual` — never relaxed to make a test pass artificially.
 - `src/cart.fixture.js` is read-only — it is the permanent buggy reference used
   for RED runs.
-- The Fix Agent may only write to `src/cart.js` after you approve the diff.
+- The Fix Agent may only write to `src/cart.js` after you approve the diff (manual mode),
+  or after the orchestrator sets `fixApproved: true` in state (auto mode).
 
 ---
 
@@ -173,24 +232,21 @@ The workflow is designed to be reusable from a web backend:
 | Layer | Mechanism |
 |---|---|
 | Input submission | POST bug report + rules to a backend endpoint |
-| Stage execution | Backend calls Bob Shell (`bob --chat-mode=bugrep-test -p "..."`) per stage |
+| Stage execution | Backend calls `bob --auth-method api-key --yolo -p "..."` per stage |
 | Progress events | Bob Shell stdout streamed to frontend via SSE |
-| Diff approval | Frontend shows diff; user approves; backend resumes Bob Shell session |
+| Diff approval | In `--auto` mode, approval is set in state; in manual mode the user approves in chat |
 | Artifact download | Backend serves `reports/` directory |
 
-**What works in the IDE today** vs **what needs additional setup:**
+**What works today** vs **what needs additional setup:**
 
-| Feature | IDE (now) | Web app (future) |
-|---|---|---|
-| Test writing by Bob | ✅ | Needs Bob Shell installed on server |
-| Fix generation by Bob | ✅ | Needs Bob Shell + authenticated session |
-| Jest runs | ✅ | ✅ (node orchestrator.js --run-tests) |
-| Report generation | ✅ | Needs Bob Shell |
-| Jira fetch | ❌ not yet | Needs JIRA_* env vars + npm install jira-client |
-| Multi-repo support | Manual | Needs repo selector UI + workspace switching |
-
-Bob Shell is not included in the IDE install.  See IBM Bob documentation for
-installation and authentication requirements before building the web backend.
+| Feature | Manual (IDE) | Auto (`--auto`) | Web app (future) |
+|---|---|---|---|
+| Test writing by Bob | ✅ | ✅ via Bob Shell | Needs Bob Shell on server |
+| Fix generation by Bob | ✅ | ✅ via Bob Shell | Needs Bob Shell + `BOBSHELL_API_KEY` |
+| Jest runs | ✅ | ✅ | ✅ (node orchestrator.js --run-tests) |
+| Report generation | ✅ | ✅ via Bob Shell | Needs Bob Shell |
+| Jira fetch | ❌ not yet | ❌ not yet | Needs JIRA_* env vars |
+| Multi-repo support | Manual | Manual | Needs repo selector UI |
 
 ---
 

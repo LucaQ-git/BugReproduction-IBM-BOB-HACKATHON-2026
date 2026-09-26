@@ -16,17 +16,20 @@
 //   node orchestrator.js --reset      — clear run state and start fresh
 //   node orchestrator.js --run-tests  — run Jest directly and record result
 //                                       (used by the Bob Fix Agent after patching)
+//   node orchestrator.js --auto       — run all 3 stages automatically via Bob Shell
+//                                       (requires BOBSHELL_API_KEY env var)
 
 'use strict';
 
 require('dotenv').config();
 
-const fs      = require('fs');
-const path    = require('path');
-const state   = require('./workflow/state');
-const inputs  = require('./workflow/inputs');
-const runner  = require('./workflow/runner');
-const jira    = require('./workflow/jira');
+const fs         = require('fs');
+const path       = require('path');
+const state      = require('./workflow/state');
+const inputs     = require('./workflow/inputs');
+const runner     = require('./workflow/runner');
+const jira       = require('./workflow/jira');
+const bobRunner  = require('./workflow/bob-runner');
 
 const args = process.argv.slice(2);
 
@@ -34,6 +37,14 @@ const args = process.argv.slice(2);
 if (args.includes('--reset')) {
   state.reset();
   console.log('✅ Workflow state cleared.  Run "node orchestrator.js" to begin again.');
+  process.exit(0);
+}
+
+// ─── --auto ──────────────────────────────────────────────────────────────────
+// Drives all three agent stages non-interactively via Bob Shell.
+// Requires BOBSHELL_API_KEY to be set in the environment.
+if (args.includes('--auto')) {
+  runAutoWorkflow();
   process.exit(0);
 }
 
@@ -156,6 +167,163 @@ if (s.stage === 'idle' || !s.stage) {
 }
 
 console.log('');
+
+// ─── Auto workflow ────────────────────────────────────────────────────────────
+
+function runAutoWorkflow() {
+  console.log('\n🤖 BugRep-AI — Automatic Workflow (Bob Shell)');
+  console.log('═════════════════════════════════════════════\n');
+
+  // Check Bob Shell API key up-front
+  if (!process.env.BOBSHELL_API_KEY) {
+    console.error('❌ BOBSHELL_API_KEY is not set.');
+    console.error('   Set it in your environment or in bugrep-ai/.env before running --auto.');
+    console.error('   Example (PowerShell):');
+    console.error('     $env:BOBSHELL_API_KEY = "your-key-here"');
+    process.exit(1);
+  }
+
+  // Load inputs — exit early if files are missing
+  let ctx;
+  try {
+    ctx = inputs.loadInputs();
+  } catch (err) {
+    console.error('❌ Input loading failed:', err.message);
+    process.exit(1);
+  }
+
+  // Reset state for a clean run
+  state.reset();
+  const runId = `run-${Date.now()}`;
+  state.save({
+    runId,
+    startedAt: new Date().toISOString(),
+    stage: 'test',
+    bugReport: ctx.bugReport,
+    rules: ctx.rules,
+  });
+  console.log(`▶  Run ID : ${runId}`);
+  console.log(`   Bug report : ${ctx.paths.bugReport}`);
+
+  // ── Stage 1: Test Agent ──────────────────────────────────────────────────
+  console.log('\n📝 Stage 1 — Test Agent (writing & running regression tests)...');
+  const testResult = bobRunner.runTestAgent();
+
+  if (testResult.error) {
+    console.error('❌ Bob Shell failed to launch:', testResult.error);
+    console.error('   Make sure Bob Shell is installed: https://bob.ibm.com/releases?bob=shell');
+    state.save({ stage: 'failed', notes: [`Stage 1 launch error: ${testResult.error}`] });
+    process.exit(1);
+  }
+
+  if (testResult.exitCode !== 0) {
+    console.error('❌ Test Agent exited with code', testResult.exitCode);
+    console.error(testResult.output);
+    state.save({ stage: 'failed', notes: [`Stage 1 exitCode: ${testResult.exitCode}`] });
+    process.exit(1);
+  }
+
+  console.log('   Test Agent complete.  Running Jest to record results...');
+
+  // Run Jest against the fixture test file (imports ./cart.fixture — the buggy code)
+  // This is the RED run: we expect failures here that confirm the bug.
+  const redRun = runner.runJest('src/cart.fixture.test.js');
+  const bugReproduced = redRun.errorType === 'assertion' && redRun.failed > 0;
+  state.save({
+    stage: 'fix',
+    testFile: 'src/cart.test.js',
+    redResult: {
+      passed:      redRun.passed,
+      failed:      redRun.failed,
+      errorType:   redRun.errorType,
+      testResults: redRun.testResults,
+      output:      redRun.output,
+    },
+    bugReproduced,
+  });
+
+  console.log(`   RED run: ${redRun.passed} passed, ${redRun.failed} failed (${redRun.errorType})`);
+
+  if (!bugReproduced) {
+    console.error('\n⚠️  Bug was NOT reproduced (no assertion failures).');
+    console.error('   Review src/cart.test.js and re-run manually.');
+    state.save({ stage: 'failed', notes: ['Bug not reproduced after Stage 1'] });
+    process.exit(1);
+  }
+
+  console.log('   🔴 Bug reproduced — assertion failures confirmed.');
+
+  // ── Stage 2: Fix Agent ──────────────────────────────────────────────────
+  console.log('\n🔧 Stage 2 — Fix Agent (generating & applying patch)...');
+
+  // Mark fix as pre-approved so the Fix Agent can apply without pausing
+  state.save({ fixApproved: true });
+
+  const fixResult = bobRunner.runFixAgent();
+
+  if (fixResult.error) {
+    console.error('❌ Bob Shell failed to launch (Stage 2):', fixResult.error);
+    state.save({ stage: 'failed', notes: [`Stage 2 launch error: ${fixResult.error}`] });
+    process.exit(1);
+  }
+
+  if (fixResult.exitCode !== 0) {
+    console.error('❌ Fix Agent exited with code', fixResult.exitCode);
+    console.error(fixResult.output);
+    state.save({ stage: 'failed', notes: [`Stage 2 exitCode: ${fixResult.exitCode}`] });
+    process.exit(1);
+  }
+
+  console.log('   Fix Agent complete.  Running Jest to record GREEN results...');
+
+  // Run Jest against cart.js (production file, post-fix)
+  const greenRun = runner.runJest('src/cart.test.js');
+  state.save({
+    stage: 'report',
+    patchedFile: 'src/cart.js',
+    greenResult: {
+      passed:      greenRun.passed,
+      failed:      greenRun.failed,
+      errorType:   greenRun.errorType,
+      testResults: greenRun.testResults,
+      output:      greenRun.output,
+    },
+  });
+
+  console.log(`   GREEN run: ${greenRun.passed} passed, ${greenRun.failed} failed (${greenRun.errorType})`);
+
+  if (greenRun.failed > 0) {
+    console.error('\n⚠️  Some tests still fail after the fix.  The report will document this.');
+  } else {
+    console.log('   🟢 All tests pass after the fix.');
+  }
+
+  // ── Stage 3: Report Agent ───────────────────────────────────────────────
+  console.log('\n📋 Stage 3 — Report Agent (generating run report)...');
+  const reportResult = bobRunner.runReportAgent();
+
+  if (reportResult.error) {
+    console.error('❌ Bob Shell failed to launch (Stage 3):', reportResult.error);
+    state.save({ stage: 'failed', notes: [`Stage 3 launch error: ${reportResult.error}`] });
+    process.exit(1);
+  }
+
+  if (reportResult.exitCode !== 0) {
+    console.error('❌ Report Agent exited with code', reportResult.exitCode);
+    console.error(reportResult.output);
+    state.save({ stage: 'failed', notes: [`Stage 3 exitCode: ${reportResult.exitCode}`] });
+    process.exit(1);
+  }
+
+  // Mark workflow as done
+  state.save({ stage: 'done' });
+  const finalState = state.load();
+
+  console.log('\n🎉 Workflow complete!');
+  if (finalState.reportMd)   console.log(`   Markdown report : ${finalState.reportMd}`);
+  if (finalState.reportJson) console.log(`   JSON report     : ${finalState.reportJson}`);
+  console.log('\n   Run "node orchestrator.js --reset" to start a new run.\n');
+}
 
 // ─── Prompt templates ─────────────────────────────────────────────────────────
 
