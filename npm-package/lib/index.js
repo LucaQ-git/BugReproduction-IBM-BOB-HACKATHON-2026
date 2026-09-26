@@ -125,7 +125,8 @@ function scaffold(dir, opts) {
 
   if (!fs.existsSync(envPath)) {
     fs.writeFileSync(envPath,
-      '# IBM Bob Shell API key (IBM Bob CLI backend)\n' +
+      '# IBM Bob API key — set ONE of these (BOB_API_KEY for Bob 2.0.5+, BOBSHELL_API_KEY for older)\n' +
+      'BOB_API_KEY=\n' +
       'BOBSHELL_API_KEY=\n\n' +
       '# IBM watsonx.ai backend (alternative to Bob CLI)\n' +
       'WATSONX_API_KEY=\n' +
@@ -299,9 +300,16 @@ function runWithBob(src, report) {
     `7. If both attempts fail, stop and explain what you tried.\n` +
     `Do not weaken any assertions. Only fix the implementation.`;
 
+  // Bob 2.0.5+ reads BOB_API_KEY; older versions read BOBSHELL_API_KEY.
+  // Pass both so either version of Bob works.
+  const bobEnv = { ...process.env };
+  if (process.env.BOBSHELL_API_KEY && !bobEnv.BOB_API_KEY) {
+    bobEnv.BOB_API_KEY = process.env.BOBSHELL_API_KEY;
+  }
+
   try {
     execSync(`bob run --trust "${prompt.replace(/"/g, '\\"')}"`, {
-      stdio: 'inherit', cwd, env: { ...process.env },
+      stdio: 'inherit', cwd, env: bobEnv,
     });
     console.log(`\n${GREEN}${BOLD}🎉 IBM Bob completed the workflow.${RESET}\n`);
   } catch (err) {
