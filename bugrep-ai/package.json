@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@ibm-cloud/watsonx-ai": "^1.7.16",
+    "bugrep-ai-root": "file:..",
     "dotenv": "^18.0.4"
   }
 }

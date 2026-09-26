@@ -4,11 +4,9 @@
   "description": "BugRep-AI — IBM Bob 2.0 Hackathon. Run 'npm run setup' to install everything.",
   "private": true,
   "scripts": {
-    "setup":      "npm install --prefix bugrep-ai && npm install --prefix web-app",
-    "start":      "node bugrep-ai/orchestrator.js",
-    "test":       "npm test --prefix bugrep-ai",
-    "dev:web":    "npm run dev --prefix web-app",
-    "build:web":  "npm run build --prefix web-app",
-    "demo":       "node bugrep-ai/orchestrator.js"
+    "setup":  "npm install --prefix bugrep-ai",
+    "start":  "node bugrep-ai/orchestrator.js",
+    "test":   "npm test --prefix bugrep-ai",
+    "demo":   "node bugrep-ai/orchestrator.js"
   }
 }

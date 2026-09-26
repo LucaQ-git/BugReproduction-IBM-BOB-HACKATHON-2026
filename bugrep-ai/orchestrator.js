@@ -101,6 +101,68 @@ if (args.includes('--run-tests')) {
 console.log('\n🤖 BugRep-AI — IBM Bob Workflow Coordinator');
 console.log('═══════════════════════════════════════════\n');
 
+// ─── First-run scaffold ───────────────────────────────────────────────────────
+// If the fixtures or source file are missing, create them automatically so the
+// user gets a working starting point instead of a crash.
+(function scaffoldIfNeeded() {
+  const fixturesDir = path.join(__dirname, 'fixtures');
+  const bugReportPath = path.join(fixturesDir, 'bug_report.txt');
+  const docsDir = path.join(__dirname, 'docs');
+  const rulesPath = path.join(docsDir, 'cart_rules.md');
+  const srcDir = path.join(__dirname, 'src');
+  const srcPath = path.join(srcDir, 'cart.js');
+  const fixturePath = path.join(srcDir, 'cart.fixture.js');
+
+  let scaffolded = false;
+
+  if (!fs.existsSync(fixturesDir)) fs.mkdirSync(fixturesDir, { recursive: true });
+  if (!fs.existsSync(docsDir))     fs.mkdirSync(docsDir,     { recursive: true });
+  if (!fs.existsSync(srcDir))      fs.mkdirSync(srcDir,      { recursive: true });
+
+  if (!fs.existsSync(bugReportPath)) {
+    fs.writeFileSync(bugReportPath,
+      'Bug Report: The cart total becomes incorrect or yields NaN/negative values\n' +
+      'when applying a discount to an empty cart or when items array is empty.\n'
+    );
+    console.log('📝 Created fixtures/bug_report.txt (sample — edit with your real bug)');
+    scaffolded = true;
+  }
+
+  if (!fs.existsSync(rulesPath)) {
+    fs.writeFileSync(rulesPath,
+      '# Shopping Cart Business Rules\n\n' +
+      '1. Subtotals are calculated from item prices.\n' +
+      '2. Cart totals must NEVER drop below 0, even with discounts applied.\n' +
+      '3. An empty cart (0 items) must always return a total of 0.\n'
+    );
+    console.log('📝 Created docs/cart_rules.md (sample — edit with your real rules)');
+    scaffolded = true;
+  }
+
+  if (!fs.existsSync(srcPath)) {
+    const buggy =
+      '// src/cart.js\n' +
+      'function calculateTotal(items, discountPercentage) {\n' +
+      '  let subtotal = items.reduce((sum, item) => sum + item.price, 0);\n' +
+      '  // BUG: empty cart + discount yields NaN\n' +
+      '  let discount = (subtotal * discountPercentage) / 100;\n' +
+      '  return subtotal - discount;\n' +
+      '}\n' +
+      'module.exports = { calculateTotal };\n';
+    fs.writeFileSync(srcPath, buggy);
+    console.log('📝 Created src/cart.js (sample buggy implementation)');
+    scaffolded = true;
+  }
+
+  if (!fs.existsSync(fixturePath)) {
+    fs.copyFileSync(srcPath, fixturePath);
+    console.log('📝 Created src/cart.fixture.js (buggy reference copy)');
+    scaffolded = true;
+  }
+
+  if (scaffolded) console.log('');
+})();
+
 // Load inputs — exit early with a clear message if files are missing
 let ctx;
 try {

@@ -1,3 +1,0 @@
-/* index.css — global reset only; all app styles are in App.css */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { min-height: 100vh; }

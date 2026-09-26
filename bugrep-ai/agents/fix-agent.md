@@ -67,19 +67,26 @@ If either precondition is not met, **stop and report** — do not guess at a fix
    Do not modify `src/cart.fixture.js` — it is the permanent buggy reference.
 7. Run the full test suite (`src/cart.test.js`) against `src/cart.js`.
    The test file's imports must point to `./cart` for the GREEN run.
-8. Record the green result in `.workflow-state.json`.
-9. Report:
-   - How many tests passed.
-   - Whether any test still fails (honest result — do not retry more than once
-     without user direction).
-   - If tests still fail after one retry, stop and report the failure honestly.
+8. **If tests still fail (Attempt 1):**
+   - Read the exact failure messages from the Jest output.
+   - Identify what the first fix missed.
+   - Produce a revised diff that addresses the remaining failures.
+   - Record the revised diff in `.workflow-state.json` under `proposedDiff` (overwrite).
+   - Apply the revised fix to `src/cart.js`.
+   - Re-run the full test suite (Attempt 2).
+9. Record the final result in `.workflow-state.json` under `greenResult`.
+10. Report:
+    - How many tests passed / failed.
+    - Which attempt succeeded (1 or 2), or that both attempts failed.
+    - If both attempts fail, stop, explain exactly what was tried, and ask the
+      user how to proceed. Do not attempt a third fix automatically.
 
 ---
 
 ## Retry limit
 
-Maximum **1 automatic retry** if the first fix attempt fails. On a second
-failure, stop, explain what you tried, and ask the user how to proceed.
+Maximum **1 automatic retry** (2 attempts total) if the first fix attempt fails.
+On a second failure, stop and report honestly — do not attempt a third fix.
 
 ---
 
