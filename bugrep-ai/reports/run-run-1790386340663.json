@@ -1,0 +1,160 @@
+{
+  "runMetadata": {
+    "runId": "run-1790386340663",
+    "startedAt": "2026-09-26T01:32:20.663Z",
+    "completedAt": "2026-09-26T01:34:15.173Z",
+    "finalStage": "report",
+    "fixApproved": true
+  },
+  "originalBugReport": {
+    "source": "fixtures/bug_report.txt",
+    "text": "[NegativeTotal] calculateTotal with discount code \"OVER100\" (150)\n\nBug Report: calculateTotal produced an unexpected result.\n\nEngine: BUGGY (cart.fixture.js)\nDiscount applied: discount code \"OVER100\" (150)\nCart contents:\n  - USB-C Hub x1 @ $49.99\n  - Coffee Thermos x1 @ $34.99\n\nExpected: a valid dollar amount >= $0.00\nReceived: 🔴 Result: $-42.49 (negative!)\n\nDetails: Result is -42.489999999999995 — total dropped below zero (no clamp applied)\n\nSteps to reproduce:\n1. Add items to the cart (see above)\n2. Apply discount code \"OVER100\" (150)\n3. Observe the cart total"
+  },
+  "reproductionEvidence": {
+    "testFile": "src/cart.fixture.test.js",
+    "targetImplementation": "src/cart.fixture.js",
+    "testCount": 18,
+    "errorTypeClassification": "assertion",
+    "bugReproduced": true,
+    "verdictReason": "Test 'discount greater than 100% clamps total to 0 (bug: returns negative)' directly reproduced the reported scenario: calculateTotal([{price:10}], 150) returned -5 instead of 0.",
+    "redRunSummary": {
+      "passed": 6,
+      "failed": 12
+    },
+    "tests": [
+      { "name": "empty cart with no discount returns 0", "status": "passed", "failureMessage": null },
+      { "name": "empty cart with undefined discount returns 0 (bug: yields NaN)", "status": "failed", "failureMessage": "Expected: 0 / Received: NaN" },
+      { "name": "empty cart with a non-zero discount returns 0 (bug: may yield NaN or negative)", "status": "passed", "failureMessage": null },
+      { "name": "normal items with 0% discount returns full subtotal", "status": "passed", "failureMessage": null },
+      { "name": "normal items with 10% discount returns correct discounted total", "status": "passed", "failureMessage": null },
+      { "name": "decimal amounts are rounded to 2 decimal places", "status": "passed", "failureMessage": null },
+      { "name": "decimal result requiring rounding is rounded to 2 dp", "status": "failed", "failureMessage": "Expected: 6.67 / Received: 6.666700000000001" },
+      { "name": "discount greater than 100% clamps total to 0 (bug: returns negative)", "status": "failed", "failureMessage": "Expected: 0 / Received: -5" },
+      { "name": "discount exactly 100% returns 0", "status": "passed", "failureMessage": null },
+      { "name": "undefined discountPercentage returns full subtotal (bug: yields NaN)", "status": "failed", "failureMessage": "Expected: 20 / Received: NaN" },
+      { "name": "no discount argument at all returns full subtotal (bug: yields NaN)", "status": "failed", "failureMessage": "Expected: 20 / Received: NaN" },
+      { "name": "negative discount is clamped to 0 (bug: acts as surcharge)", "status": "failed", "failureMessage": "Expected: 50 / Received: 60" },
+      { "name": "NaN discount throws RangeError (bug: silently produces NaN)", "status": "failed", "failureMessage": "Expected function to throw RangeError — did not throw" },
+      { "name": "Infinity discount throws RangeError (bug: silently produces -Infinity)", "status": "failed", "failureMessage": "Expected function to throw RangeError — did not throw" },
+      { "name": "-Infinity discount throws RangeError (bug: silently produces Infinity)", "status": "failed", "failureMessage": "Expected function to throw RangeError — did not throw" },
+      { "name": "item with undefined price throws TypeError (bug: silently accumulates NaN)", "status": "failed", "failureMessage": "Expected function to throw TypeError — did not throw" },
+      { "name": "item with missing price property throws TypeError (bug: silently accumulates NaN)", "status": "failed", "failureMessage": "Expected function to throw TypeError — did not throw" },
+      { "name": "item with negative price throws TypeError (bug: silently accepts)", "status": "failed", "failureMessage": "Expected function to throw TypeError — did not throw" }
+    ]
+  },
+  "rootCauseAnalysis": {
+    "defectiveFile": "src/cart.fixture.js",
+    "defectiveLines": "13-16",
+    "defects": [
+      {
+        "description": "No clamp: subtotal - discount can be negative when discountPercentage > 100",
+        "lines": "15-16",
+        "ruleViolated": "Rule 2 — Cart totals must NEVER drop below 0"
+      },
+      {
+        "description": "discountPercentage used without guarding for undefined/null — produces NaN",
+        "lines": "15",
+        "ruleViolated": "Rule 4 — Missing or undefined discountPercentage treated as 0%"
+      },
+      {
+        "description": "Negative discountPercentage passes through as a surcharge",
+        "lines": "15-16",
+        "ruleViolated": "Rule 5 — Negative discount clamped to 0%"
+      },
+      {
+        "description": "NaN/±Infinity discount is silently accepted",
+        "lines": "15",
+        "ruleViolated": "Rule 6 — NaN or ±Infinity must throw RangeError"
+      },
+      {
+        "description": "Item prices never validated — undefined, missing, or negative prices silently produce wrong results",
+        "lines": "14",
+        "ruleViolated": "Rules 7 & 8 — Invalid/negative prices must throw TypeError"
+      },
+      {
+        "description": "No rounding: raw floating-point arithmetic returned",
+        "lines": "16",
+        "ruleViolated": "Rule 9 — All totals rounded to 2 decimal places"
+      }
+    ],
+    "primaryFailureTrace": "subtotal = 49.99 + 34.99 = 84.98; discount = 84.98 × 150 / 100 = 127.47; result = 84.98 − 127.47 = −42.49"
+  },
+  "proposedFix": {
+    "source": "proposedDiff in .workflow-state.json",
+    "diff": "--- a/src/cart.fixture.js\n+++ b/src/cart.js\n@@ -1,9 +1,41 @@\n-// src/cart.fixture.js\n-// BUGGY reference implementation — do NOT edit this file.\n+// src/cart.js — Production implementation (patched)\n \n function calculateTotal(items, discountPercentage) {\n-  let subtotal = items.reduce((sum, item) => sum + item.price, 0);\n-  let discount = (subtotal * discountPercentage) / 100;\n-  return subtotal - discount;\n+  // Rule 6: NaN or ±Infinity discount → RangeError\n+  if (typeof discountPercentage === 'number' &&\n+      (isNaN(discountPercentage) || !isFinite(discountPercentage))) {\n+    throw new RangeError('discountPercentage must be a finite number');\n+  }\n+\n+  // Rule 4: undefined/missing discount → treat as 0%\n+  // Rule 5: negative discount → clamp to 0%\n+  let discount = (discountPercentage === undefined || discountPercentage === null)\n+    ? 0\n+    : discountPercentage;\n+  if (discount < 0) discount = 0;\n+\n+  // Rule 3: empty cart always returns 0\n+  if (items.length === 0) return 0;\n+\n+  // Rules 7 & 8: validate each item's price\n+  for (const item of items) {\n+    if (item.price === undefined || item.price === null || typeof item.price !== 'number' || isNaN(item.price)) {\n+      throw new TypeError('Each item must have a numeric price');\n+    }\n+    if (item.price < 0) {\n+      throw new TypeError('Item prices must be non-negative');\n+    }\n+  }\n+\n+  const subtotal = items.reduce((sum, item) => sum + item.price, 0);\n+  const discountAmount = (subtotal * discount) / 100;\n+  const total = subtotal - discountAmount;\n+\n+  // Rule 2: total must never be negative (discount > 100%)\n+  const clamped = Math.max(0, total);\n+\n+  // Rule 9: round to 2 decimal places\n+  return Math.round(clamped * 100) / 100;\n }\n \n module.exports = { calculateTotal };",
+    "approvalStatus": "approved",
+    "userNotes": null
+  },
+  "verification": {
+    "testFile": "src/cart.test.js",
+    "targetImplementation": "src/cart.js",
+    "greenRunSummary": {
+      "passed": 18,
+      "failed": 0
+    },
+    "anyTestStillFailing": false,
+    "tests": [
+      { "name": "empty cart returns exactly 0", "status": "passed" },
+      { "name": "two $50 items with 10% discount returns 90", "status": "passed" },
+      { "name": "extreme discount (200%) never returns a negative total", "status": "passed" },
+      { "name": "discount above 100% returns 0, not a negative number", "status": "passed" },
+      { "name": "undefined discount is treated as 0% (full price returned)", "status": "passed" },
+      { "name": "missing discount argument is treated as 0%", "status": "passed" },
+      { "name": "negative discount is clamped to 0% (no surcharge)", "status": "passed" },
+      { "name": "NaN discount throws RangeError", "status": "passed" },
+      { "name": "Infinity discount throws RangeError", "status": "passed" },
+      { "name": "-Infinity discount throws RangeError", "status": "passed" },
+      { "name": "item with undefined price throws TypeError", "status": "passed" },
+      { "name": "item with missing price property throws TypeError", "status": "passed" },
+      { "name": "item with negative price throws TypeError", "status": "passed" },
+      { "name": "floating-point prices are rounded to 2 decimal places", "status": "passed" },
+      { "name": "discount on decimal prices rounds to 2dp", "status": "passed" },
+      { "name": "zero discount returns full subtotal", "status": "passed" },
+      { "name": "100% discount returns exactly 0", "status": "passed" },
+      { "name": "single item with exact discount", "status": "passed" }
+    ]
+  },
+  "changedFiles": [
+    {
+      "file": "src/cart.fixture.test.js",
+      "change": "created",
+      "reason": "RED-run regression suite written by Test Agent to reproduce the reported bug against src/cart.fixture.js"
+    },
+    {
+      "file": "src/cart.test.js",
+      "change": "created",
+      "reason": "GREEN-run regression suite written for src/cart.js; serves as permanent regression guard"
+    },
+    {
+      "file": "src/cart.js",
+      "change": "patched",
+      "reason": "Production implementation updated with clamp, input validation, and rounding per all 9 business rules"
+    }
+  ],
+  "remainingLimitations": [
+    {
+      "type": "uncovered_rule",
+      "description": "Rule 7 partial: a numeric NaN item price ({ price: NaN }) is handled by the guard but no explicit test covers it in src/cart.test.js"
+    },
+    {
+      "type": "uncovered_edge_case",
+      "description": "String-typed discountPercentage (e.g. '10') is silently coerced by JS arithmetic; no rule or test addresses this"
+    },
+    {
+      "type": "uncovered_edge_case",
+      "description": "A null, undefined, or non-array items argument would throw an unhandled TypeError before any guard; not covered by rules or tests"
+    },
+    {
+      "type": "uncovered_edge_case",
+      "description": "Floating-point accumulation across more than two items is not explicitly tested for rounding correctness"
+    },
+    {
+      "type": "not_executed",
+      "description": "Jira integration (workflow/jira.js) was not connected; bug report was sourced from fixtures/bug_report.txt"
+    },
+    {
+      "type": "not_executed",
+      "description": "The --auto (Bob Shell) execution path was not used; stages were driven via Bob IDE manual mode"
+    }
+  ]
+}

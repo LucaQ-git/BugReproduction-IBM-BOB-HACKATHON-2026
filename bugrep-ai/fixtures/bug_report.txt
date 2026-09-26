@@ -1,2 +1,22 @@
-Bug Report: The cart total becomes incorrect or yields NaN/negative values when applying
-a discount to an empty cart or when items array is empty.
+[NegativeTotal] calculateTotal with discount code "OVER100" (150)
+
+Bug Report: calculateTotal produced an unexpected result.
+
+Engine: BUGGY (cart.fixture.js)
+Discount applied: discount code "OVER100" (150)
+Cart contents:
+  - Wireless Headphones x2 @ $79.99
+  - Mechanical Keyboard x2 @ $129.99
+  - USB-C Hub x1 @ $49.99
+  - Running Shoes x1 @ $94.50
+  - Coffee Thermos x1 @ $34.99
+
+Expected: a valid dollar amount >= $0.00
+Received: 🔴 Result: $-299.72 (negative!)
+
+Details: Result is -299.72000000000014 — total dropped below zero (no clamp applied)
+
+Steps to reproduce:
+1. Add items to the cart (see above)
+2. Apply discount code "OVER100" (150)
+3. Observe the cart total

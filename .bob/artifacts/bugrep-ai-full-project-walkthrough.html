@@ -1,0 +1,374 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>BugRep-AI Project Walkthrough</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 14px; line-height: 1.6; background: #ffffff; color: #1f2328; padding: 32px 16px; }
+  .page { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #57606a; font-size: 13px; margin-bottom: 32px; }
+  h2 { font-size: 16px; font-weight: 700; margin: 32px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+  h3 { font-size: 13px; font-weight: 700; margin: 20px 0 6px; color: #1f2328; }
+  p { margin-bottom: 10px; color: #1f2328; }
+  code { font-family: "Cascadia Code", "Consolas", monospace; font-size: 12px; background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 3px; padding: 1px 5px; }
+  pre { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px 16px; font-size: 12px; font-family: "Cascadia Code", "Consolas", monospace; overflow-x: auto; margin: 10px 0 14px; line-height: 1.5; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+  th { background: #f7f8fa; text-align: left; padding: 8px 12px; border: 1px solid #e5e7eb; font-weight: 600; }
+  td { padding: 7px 12px; border: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .file-block { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+  .file-header { background: #f7f8fa; padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #e5e7eb; }
+  .file-path { font-family: "Cascadia Code", "Consolas", monospace; font-size: 12px; font-weight: 600; color: #3b82d4; }
+  .file-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .tag-core { background: #dbeafe; color: #1d4ed8; }
+  .tag-agent { background: #ede9fe; color: #6d28d9; }
+  .tag-data { background: #dcfce7; color: #15803d; }
+  .tag-auto { background: #fef3c7; color: #b45309; }
+  .tag-output { background: #f1f5f9; color: #475569; }
+  .tag-readonly { background: #fee2e2; color: #b91c1c; }
+  .file-body { padding: 14px 16px; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; margin-right: 4px; font-weight: 600; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-yellow { background: #fef3c7; color: #b45309; }
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; font-size: 13px; }
+  .flow-step { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 14px; text-align: center; }
+  .flow-arrow { color: #57606a; font-size: 16px; }
+  .status-row { display: flex; gap: 24px; margin: 16px 0; flex-wrap: wrap; }
+  .status-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; flex: 1; min-width: 140px; }
+  .status-label { font-size: 11px; color: #57606a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .status-value { font-size: 20px; font-weight: 700; margin-top: 2px; }
+  .green { color: #15803d; }
+  .red { color: #b91c1c; }
+  .muted { color: #57606a; font-size: 13px; }
+  ul { padding-left: 20px; margin-bottom: 10px; }
+  li { margin-bottom: 4px; }
+  .section-intro { color: #57606a; font-size: 13px; margin-bottom: 16px; }
+  .divider { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #57606a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>BugRep-AI — Full Project Walkthrough</h1>
+  <p class="subtitle">What every file does and how the workflow fits together · Run ID: run-1790379507073 · Stage: ✅ done</p>
+
+  
+  <h2>The Big Picture</h2>
+  <p class="section-intro">BugRep-AI takes a plain-English bug report and business rules, then runs a three-stage AI pipeline — writing tests, fixing the bug, and generating a report — entirely automatically via <strong>Bob Shell</strong>.</p>
+
+  <div class="flow">
+    <div class="flow-step">📄 Bug report<br /><span class="muted">fixtures/bug_report.txt</span></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">🔴 Test Agent<br /><span class="muted">writes + RED run</span></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">🔧 Fix Agent<br /><span class="muted">patches cart.js + GREEN run</span></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">📋 Report Agent<br /><span class="muted">writes reports/</span></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">✅ Done</div>
+  </div>
+
+  <p>All three stages are driven by a single CLI command:</p>
+  <pre>cd bugrep-ai
+node orchestrator.js --auto</pre>
+
+  <p>Bob Shell authenticates via <code>BOBSHELL_API_KEY</code> and runs each agent stage non-interactively with <code>bob run --trust &lt;instructions&gt;</code>.</p>
+
+  <div class="status-row">
+    <div class="status-card"><div class="status-label">Last run</div><div class="status-value" style="font-size:13px;color:#15803d">✅ done</div></div>
+    <div class="status-card"><div class="status-label">RED failures</div><div class="status-value red">12</div></div>
+    <div class="status-card"><div class="status-label">GREEN pass</div><div class="status-value green">18</div></div>
+    <div class="status-card"><div class="status-label">Tests total</div><div class="status-value">18</div></div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>Root-level files</h2>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">AGENTS.md</span><span class="file-tag tag-core">Context</span></div>
+    <div class="file-body">
+      <p>Bob reads this file automatically at the start of every session. It tells Bob what this project is, where everything lives, the custom modes available, and the non-negotiable rules (never weaken assertions, never edit <code>cart.fixture.js</code>, etc.).</p>
+      <p class="muted">Think of it as the project's constitution — it's the single source of truth that keeps Bob oriented across all three stages.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">README.md</span><span class="file-tag tag-core">Documentation</span></div>
+    <div class="file-body">
+      <p>Human-readable documentation. Covers prerequisites, quick-start commands, how to run each stage manually or automatically, Bob Shell installation, API key setup, and the test integrity policy. Also contains the future web-app integration plan.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">SECURITY.MD</span><span class="file-tag tag-core">Policy</span></div>
+    <div class="file-body">
+      <p>Security ground rules for the project: never hardcode API keys, always use environment variables, never paste credentials into Bob chat. Also contains code examples of the right and wrong way to handle credentials.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">.bobignore</span><span class="file-tag tag-core">Config</span></div>
+    <div class="file-body">
+      <p>Tells Bob which files to never read or expose. Covers all API key patterns (<code>*API_KEY*</code>, <code>*api_key*</code>), <code>.env</code> files, and IBM Cloud credential patterns. This prevents Bob from accidentally seeing or leaking secrets.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">.gitignore</span><span class="file-tag tag-core">Config</span></div>
+    <div class="file-body">
+      <p>Standard git ignore rules — excludes <code>node_modules/</code>, <code>.env</code>, <code>*api-key*</code>, <code>*api_key*</code>, and other credential-bearing file patterns from being committed.</p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>bugrep-ai/orchestrator.js — The Controller</h2>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/orchestrator.js</span><span class="file-tag tag-core">Entry Point</span></div>
+    <div class="file-body">
+      <p>The main script. It is a <strong>coordinator</strong>, not an AI — it knows nothing about bugs. It has four operating modes:</p>
+      <table>
+        <tr><th>Command</th><th>What it does</th></tr>
+        <tr><td><code>node orchestrator.js</code></td><td>Reads state, prints the current stage, and prints the Bob chat prompt to paste for the next manual step.</td></tr>
+        <tr><td><code>node orchestrator.js --reset</code></td><td>Deletes <code>.workflow-state.json</code> so you can start a fresh run.</td></tr>
+        <tr><td><code>node orchestrator.js --run-tests</code></td><td>Runs Jest directly and records the result into state. Used manually between stages.</td></tr>
+        <tr><td><code>node orchestrator.js --auto</code></td><td><strong>Full automation.</strong> Invokes Bob Shell for all 3 stages in sequence via <code>workflow/bob-runner.js</code>, runs Jest for the RED and GREEN runs, and records everything.</td></tr>
+      </table>
+      <p>The <code>--auto</code> path: resets state → calls Bob Shell (Test Agent) → runs Jest RED → checks bug reproduced → sets <code>fixApproved: true</code> → calls Bob Shell (Fix Agent) → runs Jest GREEN → calls Bob Shell (Report Agent) → marks <code>stage: done</code>.</p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>bugrep-ai/workflow/ — Supporting Modules</h2>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/workflow/state.js</span><span class="file-tag tag-core">State</span></div>
+    <div class="file-body">
+      <p>Reads and writes <code>.workflow-state.json</code>. Every agent and the orchestrator use this — it's the shared memory of the entire run. Exposes three functions: <code>load()</code>, <code>save(updates)</code>, and <code>reset()</code>.</p>
+      <p>The state file tracks: run ID, timestamps, current stage, the bug report text, RED run results, whether the bug was reproduced, the proposed diff, fix approval status, GREEN run results, and report file paths.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/workflow/runner.js</span><span class="file-tag tag-core">Test Runner</span></div>
+    <div class="file-body">
+      <p>Runs Jest programmatically and returns a structured result object. Invokes Jest as <code>node jest/bin/jest.js &lt;file&gt; --no-coverage --json</code> — this avoids Windows <code>.cmd</code> wrapper issues that previously caused stdout to be dropped entirely.</p>
+      <p>Returns: <code>{ passed, failed, errorType, testResults, output, error }</code>. The <code>errorType</code> is one of <code>none</code> / <code>assertion</code> / <code>syntax</code> / <code>dependency</code> / <code>environment</code> — this distinction is critical: only <code>assertion</code> failures count as a reproduced bug.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/workflow/bob-runner.js</span><span class="file-tag tag-auto">Automation</span></div>
+    <div class="file-body">
+      <p><strong>New file added in this session.</strong> Invokes Bob Shell non-interactively for each agent stage. Reads the relevant <code>agents/*.md</code> instruction file and passes it as the prompt to <code>bob run --trust &lt;prompt&gt;</code>.</p>
+      <p>Requires <code>BOBSHELL_API_KEY</code> in the environment. If the key is missing, it returns a clear error immediately. Exports: <code>runTestAgent()</code>, <code>runFixAgent()</code>, <code>runReportAgent()</code>.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/workflow/inputs.js</span><span class="file-tag tag-core">Loader</span></div>
+    <div class="file-body">
+      <p>Loads the three input documents — <code>fixtures/bug_report.txt</code>, <code>docs/cart_rules.md</code>, and <code>src/cart.js</code> — into a clean context object. Throws a clear error listing any missing files, so the orchestrator can fail fast with a useful message.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/workflow/jira.js</span><span class="file-tag tag-core">Stub</span></div>
+    <div class="file-body">
+      <p>Jira integration — <strong>not yet connected</strong>. The code is written and commented out, ready to enable. Exports <code>isConfigured()</code> (checks for <code>JIRA_BASE_URL</code>, <code>JIRA_USER_EMAIL</code>, <code>JIRA_API_TOKEN</code>) and <code>fetchIssue(issueKey)</code> (throws "not configured" until enabled).</p>
+      <p>When connected, this would let you feed a Jira issue key instead of <code>bug_report.txt</code> as the workflow input.</p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>bugrep-ai/agents/ — Bob's Instructions Per Stage</h2>
+  <p class="section-intro">These Markdown files are the prompts fed to Bob Shell. Each one tells Bob exactly what its role is, what files to read, what steps to follow, and what it must never do.</p>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/agents/test-agent.md</span><span class="file-tag tag-agent">Stage 1</span></div>
+    <div class="file-body">
+      <p>Instructions for the <strong>Test Agent</strong>. Bob reads this and then: reads the bug report + business rules, writes <code>src/cart.test.js</code> with 18 strict regression tests (using only <code>toBe</code>, <code>toEqual</code>, <code>toThrow</code>, <code>toBeGreaterThanOrEqual</code>), and runs them against <code>cart.fixture.js</code> (the buggy code) to produce the RED run.</p>
+      <p>Hard constraints: never modify <code>cart.js</code>, never weaken an assertion, never claim a bug is reproduced if the error is syntax or environment.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/agents/fix-agent.md</span><span class="file-tag tag-agent">Stage 2</span></div>
+    <div class="file-body">
+      <p>Instructions for the <strong>Fix Agent</strong>. Bob reads this and then: verifies the bug was reproduced (checks state), identifies the minimal code change, records the unified diff in <code>proposedDiff</code> in state, checks if <code>fixApproved</code> is already <code>true</code> (set by <code>--auto</code> mode) or waits for human approval, then writes the fix to <code>src/cart.js</code>.</p>
+      <p>In <code>--auto</code> mode, approval is pre-granted by the orchestrator so Bob proceeds immediately. In manual mode, Bob shows the diff and waits for "yes".</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/agents/report-agent.md</span><span class="file-tag tag-agent">Stage 3</span></div>
+    <div class="file-body">
+      <p>Instructions for the <strong>Report Agent</strong>. Bob reads this and then produces two files in <code>reports/</code>: a human-readable Markdown report and a machine-readable JSON report. Every claim must be traceable to a real file or state entry — no speculation, no invented results.</p>
+      <p>The report covers: run metadata, the original bug report verbatim, reproduction evidence (test names + failure messages), root cause analysis with line numbers, the proposed diff, verification (all 18 tests passing), changed files, and remaining limitations.</p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>bugrep-ai/src/ — The Actual Code Under Test</h2>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/src/cart.fixture.js</span><span class="file-tag tag-readonly">READ-ONLY · Never Edit</span></div>
+    <div class="file-body">
+      <p>The <strong>permanently buggy</strong> 4-line implementation. This is intentionally broken and is the "before" snapshot. The Test Agent runs tests against this file to confirm the bug exists (RED run).</p>
+      <pre>function calculateTotal(items, discountPercentage) {
+  let subtotal = items.reduce((sum, item) =&gt; sum + item.price, 0);
+  let discount = (subtotal * discountPercentage) / 100;
+  return subtotal - discount;   // ← no guards, no validation, no clamping
+}</pre>
+      <p><strong>Known defects:</strong> passes <code>undefined</code> discount straight into arithmetic (→ NaN), no clamp for &gt;100% discount (→ negative total), no validation of item prices or discount type.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/src/cart.js</span><span class="file-tag tag-data">Production · Fixed</span></div>
+    <div class="file-body">
+      <p>The <strong>patched production implementation</strong>. Written by the Fix Agent. Implements all 9 business rules: throws <code>RangeError</code> for NaN/Infinity discount, normalises undefined/null to 0%, clamps negative discounts, validates each item price, clamps total to ≥ 0, and rounds to 2 decimal places.</p>
+      <p>The GREEN run (18/18 passing) confirms this file satisfies every test in <code>cart.test.js</code>.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/src/cart.fixture.test.js</span><span class="file-tag tag-readonly">RED run test file</span></div>
+    <div class="file-body">
+      <p>18 tests that explicitly <code>require('./cart.fixture')</code>. This is the file the orchestrator runs for the RED run in <code>--auto</code> mode. Result: <strong>12 failures, 6 passing</strong> — proving the bug exists before the fix is applied.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/src/cart.test.js</span><span class="file-tag tag-data">GREEN run test file</span></div>
+    <div class="file-body">
+      <p>18 tests that <code>require('./cart')</code> (the production file). Written by the Test Agent (or manually). This is the file run for the GREEN run after the fix is applied. Result: <strong>18/18 passing</strong>. These tests become the permanent regression suite.</p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>bugrep-ai/fixtures/ and bugrep-ai/docs/ — Inputs</h2>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/fixtures/bug_report.txt</span><span class="file-tag tag-data">Input</span></div>
+    <div class="file-body">
+      <p>The plain-English bug report that triggers the entire workflow. Currently: <em>"The cart total becomes incorrect or yields NaN/negative values when applying a discount to an empty cart or when items array is empty."</em></p>
+      <p>To run a different bug through the system, replace this file's content and run <code>node orchestrator.js --reset &amp;&amp; node orchestrator.js --auto</code>.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/docs/cart_rules.md</span><span class="file-tag tag-data">Business Rules</span></div>
+    <div class="file-body">
+      <p>The authoritative source of truth. 9 rules governing how <code>calculateTotal</code> must behave. Both the Test Agent and Fix Agent read this — tests are written to assert these rules, and the fix must satisfy all of them.</p>
+      <table>
+        <tr><th>#</th><th>Rule</th></tr>
+        <tr><td>1</td><td>Subtotals calculated from item prices</td></tr>
+        <tr><td>2</td><td>Total never below 0 (discount clamp)</td></tr>
+        <tr><td>3</td><td>Empty cart always returns 0</td></tr>
+        <tr><td>4</td><td>Undefined discount → treat as 0%</td></tr>
+        <tr><td>5</td><td>Negative discount → clamp to 0%</td></tr>
+        <tr><td>6</td><td>NaN / ±Infinity discount → throw RangeError</td></tr>
+        <tr><td>7</td><td>Missing / non-numeric item price → throw TypeError</td></tr>
+        <tr><td>8</td><td>Negative item price → throw TypeError</td></tr>
+        <tr><td>9</td><td>All totals rounded to 2 decimal places</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>bugrep-ai/reports/ — Outputs</h2>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/reports/run-1790379507073.md</span><span class="file-tag tag-output">Output</span></div>
+    <div class="file-body">
+      <p>Human-readable run report generated by the Report Agent for the last successful run. Contains all 8 required sections: run metadata, original bug report, 12 failing RED tests with exact error messages, root cause analysis citing specific line numbers, the unified diff, GREEN run verification (18/18), changed files, and remaining limitations.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/reports/run-1790379507073.json</span><span class="file-tag tag-output">Output</span></div>
+    <div class="file-body">
+      <p>Machine-readable JSON version of the same report. Useful for tooling, dashboards, or feeding into downstream systems (e.g. posting results to Jira when that integration is enabled).</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/.workflow-state.json</span><span class="file-tag tag-output">Runtime State</span></div>
+    <div class="file-body">
+      <p>The live run record written and read by every part of the system. Tracks stage, RED/GREEN results, the proposed diff, approval status, report file paths, and any notes. Currently shows <code>stage: "done"</code>, <code>bugReproduced: true</code>, <code>fixApproved: true</code>, RED 6/18 pass, GREEN 18/18 pass.</p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>Other files</h2>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/test-connection.js</span><span class="file-tag tag-core">Utility</span></div>
+    <div class="file-body">
+      <p>A one-off connectivity test for <strong>watsonx.ai</strong> (IBM's model inference service). Sends a simple "reply with exactly three words" prompt to <code>ibm/granite-3-8b-instruct</code> using <code>WATSONX_API_KEY</code> and <code>WATSONX_PROJECT_ID</code>. This is separate from Bob Shell — it was used to verify the watsonx SDK was wired up correctly. Run with: <code>node test-connection.js</code></p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/package.json</span><span class="file-tag tag-core">Config</span></div>
+    <div class="file-body">
+      <p>Node project manifest. Dev dependency: <code>jest@^29</code>. Runtime dependencies: <code>@ibm-cloud/watsonx-ai</code> (for the watsonx connection test) and <code>dotenv</code> (loads <code>.env</code> vars). Scripts: <code>npm start</code> runs the orchestrator, <code>npm test</code> runs Jest.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">bugrep-ai/.env</span><span class="file-tag tag-readonly">Secret · Never Commit</span></div>
+    <div class="file-body">
+      <p>Local environment variables. Contains <code>BOBSHELL_API_KEY</code> (for <code>--auto</code> mode), <code>WATSONX_API_KEY</code> and <code>WATSONX_PROJECT_ID</code> (for the watsonx connection test). Excluded from git via <code>.gitignore</code> and invisible to Bob via <code>.bobignore</code>.</p>
+    </div>
+  </div>
+
+  <div class="file-block">
+    <div class="file-header"><span class="file-path">.bob/</span><span class="file-tag tag-core">Bob Config</span></div>
+    <div class="file-body">
+      <p>Bob IDE workspace configuration. Contains <code>custom_modes.yaml</code> which defines the three custom modes: <code>bugrep-test</code> 🔴, <code>bugrep-fix</code> 🔧, and <code>bugrep-report</code> 📋. These modes are used in manual workflow — they focus Bob on the specific agent role and restrict available tools accordingly.</p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  
+  <h2>What's working vs. what's not yet</h2>
+  <table>
+    <tr><th>Feature</th><th>Status</th><th>Notes</th></tr>
+    <tr><td>Manual 3-stage workflow (Bob IDE)</td><td><span class="badge badge-green">✅ Working</span></td><td>Copy-paste prompts from orchestrator into Bob chat</td></tr>
+    <tr><td>Automatic workflow (<code>--auto</code>)</td><td><span class="badge badge-green">✅ Working</span></td><td>Requires Bob Shell + <code>BOBSHELL_API_KEY</code></td></tr>
+    <tr><td>Jest RED run (fixture)</td><td><span class="badge badge-green">✅ Working</span></td><td>12/18 failures confirmed on <code>cart.fixture.test.js</code></td></tr>
+    <tr><td>Jest GREEN run (production)</td><td><span class="badge badge-green">✅ Working</span></td><td>18/18 passing on <code>cart.test.js</code></td></tr>
+    <tr><td>Report generation</td><td><span class="badge badge-green">✅ Working</span></td><td>Markdown + JSON in <code>reports/</code></td></tr>
+    <tr><td>watsonx.ai connection</td><td><span class="badge badge-yellow">⚠️ Optional</span></td><td>Needs <code>WATSONX_API_KEY</code> + <code>WATSONX_PROJECT_ID</code> in <code>.env</code></td></tr>
+    <tr><td>Jira integration</td><td><span class="badge badge-red">❌ Stub only</span></td><td>Code written, not enabled — needs <code>JIRA_*</code> env vars + <code>npm install jira-client</code></td></tr>
+    <tr><td>Web app / streaming UI</td><td><span class="badge badge-red">❌ Not built</span></td><td>Documented in README as future work</td></tr>
+  </table>
+
+  <footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>
