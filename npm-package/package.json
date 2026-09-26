@@ -1,6 +1,6 @@
 {
   "name": "bugrep-ai",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Automated bug reproduction and regression patch generator powered by IBM Bob 2.0",
   "keywords": [
     "ibm",
