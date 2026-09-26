@@ -1,0 +1,31 @@
+{
+  "name": "bugrep-ai",
+  "version": "1.0.1",
+  "description": "Automated bug reproduction and regression patch generator powered by IBM Bob 2.0",
+  "keywords": [
+    "ibm",
+    "bob",
+    "ai",
+    "bug",
+    "testing",
+    "automation",
+    "watsonx"
+  ],
+  "author": "lucaquacquarelli",
+  "license": "MIT",
+  "bin": {
+    "bugrep-ai": "bin/cli.js"
+  },
+  "main": "./lib/index.js",
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0"
+  }
+}
