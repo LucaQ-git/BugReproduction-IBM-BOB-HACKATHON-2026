@@ -1,16 +1,35 @@
 // api/analyze-bug.js — Vercel serverless function
 // POST /api/analyze-bug
-// Accepts the raw cart crash context and uses OpenAI to generate a structured
-// bug report. The API key never leaves the server.
+// Accepts the raw cart crash context and uses IBM watsonx.ai (Granite) to
+// generate a structured bug report. The API key never leaves the server.
+
+// Step 1: Exchange IBM Cloud API key for a short-lived IAM bearer token
+async function getIamToken(apiKey) {
+  const res = await fetch('https://iam.cloud.ibm.com/identity/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey=${encodeURIComponent(apiKey)}`,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`IAM token request failed: ${err}`);
+  }
+  const data = await res.json();
+  return data.access_token;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'OPENAI_API_KEY is not configured on the server.' });
+  const apiKey    = process.env.WATSONX_API_KEY;
+  const projectId = process.env.WATSONX_PROJECT_ID;
+
+  if (!apiKey || !projectId) {
+    return res.status(500).json({
+      error: 'WATSONX_API_KEY and WATSONX_PROJECT_ID must be configured on the server.',
+    });
   }
 
   const { engine, cartItems, discountCode, discountValue, result } = req.body || {};
@@ -48,27 +67,35 @@ Write a bug report with these exact sections:
 Be specific, technical, and concise. Do not pad with filler sentences.`;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 600,
-        temperature: 0.3,
-      }),
-    });
+    const iamToken = await getIamToken(apiKey);
+
+    const response = await fetch(
+      `https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2024-05-31`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${iamToken}`,
+        },
+        body: JSON.stringify({
+          model_id: 'ibm/granite-3-8b-instruct',
+          project_id: projectId,
+          input: prompt,
+          parameters: {
+            max_new_tokens: 600,
+            temperature: 0.3,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const err = await response.json();
-      return res.status(502).json({ error: err.error?.message || 'OpenAI request failed' });
+      return res.status(502).json({ error: err.errors?.[0]?.message || 'watsonx.ai request failed' });
     }
 
     const data = await response.json();
-    const report = data.choices?.[0]?.message?.content?.trim();
+    const report = data.results?.[0]?.generated_text?.trim();
 
     return res.status(200).json({ ok: true, report });
   } catch (err) {
