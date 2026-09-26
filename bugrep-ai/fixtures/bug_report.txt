@@ -5,16 +5,14 @@ Bug Report: calculateTotal produced an unexpected result.
 Engine: BUGGY (cart.fixture.js)
 Discount applied: discount code "OVER100" (150)
 Cart contents:
-  - Wireless Headphones x2 @ $79.99
-  - Mechanical Keyboard x2 @ $129.99
-  - USB-C Hub x1 @ $49.99
-  - Running Shoes x1 @ $94.50
+  - USB-C Hub x8 @ $49.99
+  - Backpack x1 @ $59.00
   - Coffee Thermos x1 @ $34.99
 
 Expected: a valid dollar amount >= $0.00
-Received: 🔴 Result: $-299.72 (negative!)
+Received: 🔴 Result: $-246.95 (negative!)
 
-Details: Result is -299.72000000000014 — total dropped below zero (no clamp applied)
+Details: Result is -246.95499999999998 — total dropped below zero (no clamp applied)
 
 Steps to reproduce:
 1. Add items to the cart (see above)
